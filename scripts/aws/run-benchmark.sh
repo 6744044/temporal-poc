@@ -5,6 +5,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 STATE_FILE="${STATE_FILE:-$PROJECT_ROOT/deploy/aws-benchmark-instance.env}"
 
+source "$SCRIPT_DIR/common.sh"
+load_cloudshell_config
+prompt_for_secret TEMPORAL_API_KEY "Enter Temporal API key: "
+require_config_value TEMPORAL_ADDRESS
+require_config_value TEMPORAL_NAMESPACE
+
 BENCH_TOTAL_WORKFLOWS="${BENCH_TOTAL_WORKFLOWS:-1000}"
 BENCH_WARMUP_WORKFLOWS="${BENCH_WARMUP_WORKFLOWS:-100}"
 BENCH_CONCURRENCY="${BENCH_CONCURRENCY:-10}"
@@ -13,21 +19,6 @@ BENCH_PAYLOAD_BYTES="${BENCH_PAYLOAD_BYTES:-64}"
 BENCH_TASK_QUEUE="${BENCH_TASK_QUEUE:-benchmark-latency}"
 BENCH_DEPLOYMENT_LABEL="${BENCH_DEPLOYMENT_LABEL:-aws-ec2}"
 BENCH_RESULTS_DIR="${BENCH_RESULTS_DIR:-$PROJECT_ROOT/results/aws}"
-
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Missing required command: $1" >&2
-    exit 1
-  fi
-}
-
-require_env() {
-  local name="$1"
-  if [[ -z "${!name:-}" ]]; then
-    echo "Required environment variable is not set: $name" >&2
-    exit 1
-  fi
-}
 
 maybe_install_node() {
   if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
@@ -43,10 +34,6 @@ maybe_install_node() {
   echo "Missing node/npm and automatic installation is unavailable." >&2
   exit 1
 }
-
-require_env TEMPORAL_ADDRESS
-require_env TEMPORAL_NAMESPACE
-require_env TEMPORAL_API_KEY
 
 maybe_install_node
 require_cmd mkdir

@@ -4,17 +4,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 STATE_FILE="${STATE_FILE:-$PROJECT_ROOT/deploy/aws-benchmark-instance.env}"
+source "$SCRIPT_DIR/common.sh"
+load_cloudshell_config
 
 INPUT_REGION="${AWS_REGION:-${REGION:-}}"
 INPUT_INSTANCE_ID="${INSTANCE_ID:-}"
 INPUT_SECURITY_GROUP_ID="${SECURITY_GROUP_ID:-}"
-
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Missing required command: $1" >&2
-    exit 1
-  fi
-}
 
 require_cmd aws
 

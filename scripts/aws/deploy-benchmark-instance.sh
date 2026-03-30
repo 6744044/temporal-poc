@@ -6,10 +6,16 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DEPLOY_DIR="${DEPLOY_DIR:-$PROJECT_ROOT/deploy}"
 STATE_FILE="${STATE_FILE:-$DEPLOY_DIR/aws-benchmark-instance.env}"
 
+source "$SCRIPT_DIR/common.sh"
+load_cloudshell_config
+prompt_for_secret TEMPORAL_API_KEY "Enter Temporal API key: "
+require_config_value TEMPORAL_ADDRESS
+require_config_value TEMPORAL_NAMESPACE
+
 REGION="${AWS_REGION:-${REGION:-us-east-1}}"
 INSTANCE_TYPE="${INSTANCE_TYPE:-t3.small}"
-TASK_QUEUE="${BENCH_TASK_QUEUE:-benchmark-latency}"
-DEPLOYMENT_LABEL="${BENCH_DEPLOYMENT_LABEL:-aws-ec2}"
+TASK_QUEUE="${TASK_QUEUE:-$BENCH_TASK_QUEUE}"
+DEPLOYMENT_LABEL="${DEPLOYMENT_LABEL:-$BENCH_DEPLOYMENT_LABEL}"
 METRICS_BIND_ADDRESS="${BENCH_METRICS_BIND_ADDRESS:-0.0.0.0:9464}"
 LOG_LEVEL="${BENCH_LOG_LEVEL:-INFO}"
 SECURITY_GROUP_NAME="${SECURITY_GROUP_NAME:-temporal-bench-$(date +%s)}"
@@ -18,26 +24,7 @@ WAIT_AFTER_BOOT_SECONDS="${WAIT_AFTER_BOOT_SECONDS:-180}"
 REPO_URL="${REPO_URL:-$(git -C "$PROJECT_ROOT" config --get remote.origin.url 2>/dev/null || true)}"
 REPO_BRANCH="${REPO_BRANCH:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)}"
 
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Missing required command: $1" >&2
-    exit 1
-  fi
-}
-
-require_env() {
-  local name="$1"
-  if [[ -z "${!name:-}" ]]; then
-    echo "Required environment variable is not set: $name" >&2
-    exit 1
-  fi
-}
-
 require_cmd aws
-
-require_env TEMPORAL_ADDRESS
-require_env TEMPORAL_NAMESPACE
-require_env TEMPORAL_API_KEY
 
 if [[ -z "$REPO_URL" || -z "$REPO_BRANCH" ]]; then
   echo "Unable to determine REPO_URL/REPO_BRANCH from git. Set them explicitly." >&2

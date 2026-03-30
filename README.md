@@ -95,16 +95,20 @@ Terminate the instance when done:
 
 The repo also includes Linux-friendly `bash` scripts for CloudShell:
 
-1. Export your Temporal Cloud credentials in the shell:
+1. Edit the checked-in non-secret config once:
 
 ```bash
-export AWS_REGION=us-east-1
-export TEMPORAL_ADDRESS='<namespace>.<account>.tmprl.cloud:7233'
-export TEMPORAL_NAMESPACE='<namespace>.<account>'
-export TEMPORAL_API_KEY='<fresh-api-key>'
+nano scripts/aws/cloudshell-config.env
 ```
 
-1. Deploy the worker instance:
+Set:
+
+1. `TEMPORAL_ADDRESS`
+1. `TEMPORAL_NAMESPACE`
+1. Optional benchmark defaults such as concurrency and workflow count
+
+1. Run the deploy script. If `TEMPORAL_API_KEY` is not already set in the
+   session, the script will prompt you to enter it securely and continue:
 
 ```bash
 bash scripts/aws/deploy-benchmark-instance.sh
