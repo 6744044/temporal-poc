@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "bench:client": "ts-node src/bench/client.ts",
+    "bench:compare": "ts-node src/bench/compare.ts",
+    "bench:worker": "ts-node src/bench/worker.ts",
     "build": "tsc --build",
     "build.watch": "tsc --build --watch",
     "client": "ts-node src/client.ts",
