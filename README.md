@@ -90,3 +90,37 @@ Terminate the instance when done:
   -Region us-east-1 `
   -InstanceId '<ec2-instance-id>'
 ```
+
+#### Reusing from AWS CloudShell
+
+The repo also includes Linux-friendly `bash` scripts for CloudShell:
+
+1. Export your Temporal Cloud credentials in the shell:
+
+```bash
+export AWS_REGION=us-east-1
+export TEMPORAL_ADDRESS='<namespace>.<account>.tmprl.cloud:7233'
+export TEMPORAL_NAMESPACE='<namespace>.<account>'
+export TEMPORAL_API_KEY='<fresh-api-key>'
+```
+
+1. Deploy the worker instance:
+
+```bash
+bash scripts/aws/deploy-benchmark-instance.sh
+```
+
+1. Run the benchmark client from CloudShell:
+
+```bash
+bash scripts/aws/run-benchmark.sh
+```
+
+1. Clean up the worker instance:
+
+```bash
+bash scripts/aws/terminate-benchmark-instance.sh
+```
+
+The deploy script stores the created EC2 instance ID and security group ID in
+`deploy/aws-benchmark-instance.env` so the terminate script can reuse them.
