@@ -54,6 +54,14 @@ export interface PercentileSummary {
   p99Ms: number;
 }
 
+export interface BenchmarkDerivedLatencyEstimates {
+  activityCountPerWorkflow: number;
+  configuredActivityDelayMs: number;
+  estimatedWorkerOverheadPerActivityMeanMs: number;
+  estimatedNetworkAndTemporalResidualPerWorkflowMeanMs: number;
+  estimatedNetworkAndTemporalResidualPerActivityMeanMs: number;
+}
+
 export interface BenchmarkSummary {
   benchmarkLabel: string;
   generatedAt: string;
@@ -66,6 +74,7 @@ export interface BenchmarkSummary {
   failed: number;
   workflowEndToEndMs: PercentileSummary;
   workerActivityDurationMs: PercentileSummary;
+  derivedLatencyEstimatesMs: BenchmarkDerivedLatencyEstimates;
   stepDurationsMs: Record<BenchmarkStepName, PercentileSummary>;
   sampleFailures: string[];
 }

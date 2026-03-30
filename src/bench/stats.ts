@@ -1,5 +1,6 @@
 import {
   benchmarkSteps,
+  BenchmarkDerivedLatencyEstimates,
   BenchmarkRecord,
   BenchmarkStepName,
   BenchmarkSummary,
@@ -54,6 +55,9 @@ export function buildBenchmarkSummary(args: {
     return accumulator;
   }, {} as Record<BenchmarkStepName, PercentileSummary>);
 
+  const workflowSummary = summarizeNumbers(workflowLatencies);
+  const workerActivitySummary = summarizeNumbers(allActivityDurations);
+
   return {
     benchmarkLabel: args.benchmarkLabel,
     generatedAt: new Date().toISOString(),
@@ -64,8 +68,14 @@ export function buildBenchmarkSummary(args: {
     payloadBytes: args.payloadBytes,
     completed: successfulRecords.length,
     failed: failedRecords.length,
-    workflowEndToEndMs: summarizeNumbers(workflowLatencies),
-    workerActivityDurationMs: summarizeNumbers(allActivityDurations),
+    workflowEndToEndMs: workflowSummary,
+    workerActivityDurationMs: workerActivitySummary,
+    derivedLatencyEstimatesMs: buildDerivedLatencyEstimates({
+      activityCountPerWorkflow: benchmarkSteps.length,
+      activityDelayMs: args.activityDelayMs,
+      workflowEndToEndMeanMs: workflowSummary.meanMs,
+      workerActivityMeanMs: workerActivitySummary.meanMs,
+    }),
     stepDurationsMs: summarizedStepDurations,
     sampleFailures: failedRecords
       .slice(0, 5)
@@ -113,6 +123,18 @@ export function formatSummary(summary: BenchmarkSummary): string {
       summary.workerActivityDurationMs
     ),
     '',
+    'Derived mean-based estimates:',
+    `  worker overhead per activity ~= ${summary.derivedLatencyEstimatesMs.estimatedWorkerOverheadPerActivityMeanMs.toFixed(
+      2
+    )}ms`,
+    `  network + Temporal residual per workflow ~= ${summary.derivedLatencyEstimatesMs.estimatedNetworkAndTemporalResidualPerWorkflowMeanMs.toFixed(
+      2
+    )}ms`,
+    `  network + Temporal residual per activity ~= ${summary.derivedLatencyEstimatesMs.estimatedNetworkAndTemporalResidualPerActivityMeanMs.toFixed(
+      2
+    )}ms`,
+    '  note: residual includes transport, scheduling, polling, workflow execution, and serialization',
+    '',
     'Per-step worker activity duration:',
     ...benchmarkSteps.map((step) =>
       `  ${step}: ${formatPercentileInline(summary.stepDurationsMs[step])}`
@@ -154,6 +176,40 @@ function percentile(sortedValues: number[], ratio: number): number {
   );
 
   return roundToTwoDecimals(sortedValues[index]);
+}
+
+function buildDerivedLatencyEstimates(args: {
+  activityCountPerWorkflow: number;
+  activityDelayMs: number;
+  workflowEndToEndMeanMs: number;
+  workerActivityMeanMs: number;
+}): BenchmarkDerivedLatencyEstimates {
+  const estimatedWorkerOverheadPerActivityMeanMs = Math.max(
+    0,
+    roundToTwoDecimals(args.workerActivityMeanMs - args.activityDelayMs)
+  );
+  const estimatedNetworkAndTemporalResidualPerWorkflowMeanMs = Math.max(
+    0,
+    roundToTwoDecimals(
+      args.workflowEndToEndMeanMs -
+        args.activityCountPerWorkflow * args.workerActivityMeanMs
+    )
+  );
+  const estimatedNetworkAndTemporalResidualPerActivityMeanMs = Math.max(
+    0,
+    roundToTwoDecimals(
+      estimatedNetworkAndTemporalResidualPerWorkflowMeanMs /
+        args.activityCountPerWorkflow
+    )
+  );
+
+  return {
+    activityCountPerWorkflow: args.activityCountPerWorkflow,
+    configuredActivityDelayMs: args.activityDelayMs,
+    estimatedWorkerOverheadPerActivityMeanMs,
+    estimatedNetworkAndTemporalResidualPerWorkflowMeanMs,
+    estimatedNetworkAndTemporalResidualPerActivityMeanMs,
+  };
 }
 
 function roundToTwoDecimals(value: number): number {

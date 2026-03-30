@@ -39,7 +39,7 @@ export async function loadBenchmarkConfig(): Promise<BenchmarkConfig> {
     totalWorkflows: getEnvInt('BENCH_TOTAL_WORKFLOWS', 2000),
     warmupWorkflows: getEnvInt('BENCH_WARMUP_WORKFLOWS', 100),
     concurrency: getEnvInt('BENCH_CONCURRENCY', 10),
-    activityDelayMs: getEnvInt('BENCH_ACTIVITY_DELAY_MS', 5),
+    activityDelayMs: getEnvInt('BENCH_ACTIVITY_DELAY_MS', 1),
     payloadBytes: getEnvInt('BENCH_PAYLOAD_BYTES', 64),
     resultsDir: path.resolve(getEnvString('BENCH_RESULTS_DIR', './results')),
     metricsBindAddress: getEnvString('BENCH_METRICS_BIND_ADDRESS', '0.0.0.0:9464'),

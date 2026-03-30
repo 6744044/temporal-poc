@@ -31,11 +31,21 @@ comparing Temporal latency across environments.
 $env:BENCH_TOTAL_WORKFLOWS='200'
 $env:BENCH_WARMUP_WORKFLOWS='20'
 $env:BENCH_CONCURRENCY='10'
-$env:BENCH_ACTIVITY_DELAY_MS='5'
+$env:BENCH_ACTIVITY_DELAY_MS='1'
 npm run bench:client
 ```
 
 The client writes JSONL records and a summary JSON file under `results/`.
+The summary also includes mean-based derived estimates for:
+
+1. Worker overhead per activity
+1. Network + Temporal residual per workflow
+1. Network + Temporal residual per activity
+
+The residual values are not pure network timings. They are the portion left after
+subtracting measured activity runtime from workflow end-to-end latency, so they
+still include transport, polling, scheduling, workflow execution, and
+serialization overhead.
 
 #### Comparing two runs
 
@@ -70,7 +80,7 @@ Run the benchmark remotely through SSM:
   -TotalWorkflows 2000 `
   -WarmupWorkflows 100 `
   -Concurrency 10 `
-  -ActivityDelayMs 5
+  -ActivityDelayMs 1
 ```
 
 Terminate the instance when done:

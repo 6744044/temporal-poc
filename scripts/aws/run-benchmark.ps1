@@ -5,7 +5,7 @@ param(
   [int]$TotalWorkflows = 2000,
   [int]$WarmupWorkflows = 100,
   [int]$Concurrency = 10,
-  [int]$ActivityDelayMs = 5,
+  [int]$ActivityDelayMs = 1,
   [int]$PayloadBytes = 64,
   [string]$TaskQueue = 'benchmark-latency',
   [string]$ResultsDir = '/opt/temporal-bench/results'
