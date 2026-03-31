@@ -7,7 +7,7 @@ export async function withdraw(details: PaymentDetails): Promise<string> {
     `Withdrawing $${details.amount} from account ${details.sourceAccount}.\n\n`
   );
   const bank1 = new BankingService('bank1.example.com');
-  return await bank1.withdraw(
+  return bank1.withdraw(
     details.sourceAccount,
     details.amount,
     details.referenceId
@@ -27,7 +27,7 @@ export async function deposit(details: PaymentDetails): Promise<string> {
   //   details.amount,
   //   details.referenceId
   // );
-  return await bank2.deposit(
+  return bank2.deposit(
     details.targetAccount,
     details.amount,
     details.referenceId
@@ -41,7 +41,7 @@ export async function refund(details: PaymentDetails): Promise<string> {
     `Refunding $${details.amount} to account ${details.sourceAccount}.\n\n`
   );
   const bank1 = new BankingService('bank1.example.com');
-  return await bank1.deposit(
+  return bank1.deposit(
     details.sourceAccount,
     details.amount,
     details.referenceId

@@ -4,14 +4,13 @@ import { moneyTransfer } from './workflows';
 import type { PaymentDetails } from './shared';
 import { getEnv } from './helpers';
 
-import { namespace, taskQueueName } from './shared';
+import { taskQueueName } from './shared';
 
 async function run() {
   const { address, namespace, clientCert, clientKey, apiKey } = await getEnv();
 
-
   let connectionOptions: ConnectionOptions = {
-    address: address,
+    address,
   };
 
   // Configure mTLS authentication if certificates are provided

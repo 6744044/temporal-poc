@@ -25,7 +25,9 @@ export async function moneyTransfer(details: PaymentDetails): Promise<string> {
   try {
     withdrawResult = await withdraw(details);
   } catch (withdrawErr) {
-    throw new ApplicationFailure(`Withdrawal failed. Error: ${withdrawErr}`);
+    throw new ApplicationFailure(
+      `Withdrawal failed. Error: ${formatErrorMessage(withdrawErr)}`
+    );
   }
 
   //Execute the deposit Activity
@@ -38,14 +40,22 @@ export async function moneyTransfer(details: PaymentDetails): Promise<string> {
     try {
       refundResult = await refund(details);
       throw ApplicationFailure.create({
-        message: `Failed to deposit money into account ${details.targetAccount}. Money returned to ${details.sourceAccount}. Cause: ${depositErr}.`,
+        message: `Failed to deposit money into account ${details.targetAccount}. Money returned to ${details.sourceAccount}. Cause: ${formatErrorMessage(depositErr)}.`,
       });
     } catch (refundErr) {
       throw ApplicationFailure.create({
-        message: `Failed to deposit money into account ${details.targetAccount}. Money could not be returned to ${details.sourceAccount}. Cause: ${refundErr}.`,
+        message: `Failed to deposit money into account ${details.targetAccount}. Money could not be returned to ${details.sourceAccount}. Cause: ${formatErrorMessage(refundErr)}.`,
       });
     }
   }
   return `Transfer complete (transaction IDs: ${withdrawResult}, ${depositResult})`;
+}
+
+function formatErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }
 // @@@SNIPEND

@@ -108,7 +108,7 @@ async function runPhase(args: {
     return [];
   }
 
-  const records: BenchmarkRecord[] = new Array(args.totalWorkflows);
+  const records = new Array<BenchmarkRecord>(args.totalWorkflows);
   const workerCount = Math.min(args.config.concurrency, args.totalWorkflows);
   let nextIndex = 0;
   let completed = 0;
@@ -162,7 +162,7 @@ async function runSingleWorkflow(args: {
       taskQueue: args.config.taskQueue,
       workflowId,
     });
-    const result = (await handle.result()) as BenchmarkWorkflowResult;
+    const result: BenchmarkWorkflowResult = await handle.result();
     const completedAtEpochMs = Date.now();
 
     return {

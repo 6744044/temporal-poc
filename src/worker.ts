@@ -1,19 +1,23 @@
 // @@@SNIPSTART money-transfer-project-template-ts-worker
-import { Worker, NativeConnectionOptions, NativeConnection } from "@temporalio/worker";
+import {
+  Worker,
+  NativeConnectionOptions,
+  NativeConnection,
+} from '@temporalio/worker';
 import * as activities from './activities';
-import { namespace, taskQueueName } from './shared';
+import { taskQueueName } from './shared';
 import { getEnv } from './helpers';
 
 async function run() {
   const { address, namespace, clientCert, clientKey, apiKey } = await getEnv();
 
   let connectionOptions: NativeConnectionOptions = {
-    address: address,
+    address,
   };
 
   if (clientCert && clientKey) {
-  // Configure mTLS authentication if certificate and key are provided
-  connectionOptions.tls = {
+    // Configure mTLS authentication if certificate and key are provided
+    connectionOptions.tls = {
       clientCertPair: {
         crt: clientCert,
         key: clientKey,
