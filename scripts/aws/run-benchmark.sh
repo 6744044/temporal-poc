@@ -40,20 +40,30 @@ require_cmd mkdir
 
 cd "$PROJECT_ROOT"
 
+log "Loaded benchmark run config."
+log "  namespace=$TEMPORAL_NAMESPACE"
+log "  address=$TEMPORAL_ADDRESS"
+log "  total_workflows=$BENCH_TOTAL_WORKFLOWS"
+log "  warmup_workflows=$BENCH_WARMUP_WORKFLOWS"
+log "  concurrency=$BENCH_CONCURRENCY"
+log "  activity_delay_ms=$BENCH_ACTIVITY_DELAY_MS"
+log "  payload_bytes=$BENCH_PAYLOAD_BYTES"
+
 if [[ ! -d node_modules ]]; then
-  echo "Installing project dependencies..."
+  log "Installing project dependencies..."
   npm ci
 fi
 
-echo "Building benchmark client..."
+log "Building benchmark client..."
 npm run build
 
 mkdir -p "$BENCH_RESULTS_DIR"
+log "Results directory: $BENCH_RESULTS_DIR"
 
 if [[ -f "$STATE_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$STATE_FILE"
-  echo "Using worker instance: ${INSTANCE_ID:-unknown}"
+  log "Using worker instance from state file: ${INSTANCE_ID:-unknown}"
 fi
 
 export BENCH_TOTAL_WORKFLOWS
@@ -65,11 +75,9 @@ export BENCH_TASK_QUEUE
 export BENCH_DEPLOYMENT_LABEL
 export BENCH_RESULTS_DIR
 
-echo "Running benchmark client..."
+log "Running benchmark client..."
 node lib/bench/client.js
 
 LATEST_SUMMARY="$(ls -t "$BENCH_RESULTS_DIR"/*.summary.json | head -n 1)"
 
-echo
-echo "Latest summary:"
-echo "  $LATEST_SUMMARY"
+log "Latest summary file: $LATEST_SUMMARY"

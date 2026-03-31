@@ -11,6 +11,28 @@ require_cmd() {
   fi
 }
 
+log() {
+  printf '[%s] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+}
+
+sleep_with_progress() {
+  local total_seconds="$1"
+  local label="${2:-Waiting}"
+  local step="${3:-15}"
+  local remaining="$total_seconds"
+
+  while (( remaining > 0 )); do
+    local current_step="$step"
+    if (( remaining < current_step )); then
+      current_step="$remaining"
+    fi
+
+    log "$label (${remaining}s remaining)"
+    sleep "$current_step"
+    remaining=$((remaining - current_step))
+  done
+}
+
 load_cloudshell_config() {
   local config_file="${CLOUDSHELL_CONFIG_FILE:-$CLOUDSHELL_CONFIG_FILE_DEFAULT}"
 

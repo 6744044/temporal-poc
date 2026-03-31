@@ -27,15 +27,15 @@ if [[ -z "${INSTANCE_ID:-}" ]]; then
   exit 1
 fi
 
-echo "Terminating instance $INSTANCE_ID in $REGION..."
+log "Terminating instance $INSTANCE_ID in $REGION..."
 aws ec2 terminate-instances --instance-ids "$INSTANCE_ID" --region "$REGION" >/dev/null
 aws ec2 wait instance-terminated --instance-ids "$INSTANCE_ID" --region "$REGION"
 
 if [[ -n "${SECURITY_GROUP_ID:-}" ]]; then
-  echo "Deleting security group $SECURITY_GROUP_ID..."
+  log "Deleting security group $SECURITY_GROUP_ID..."
   aws ec2 delete-security-group --group-id "$SECURITY_GROUP_ID" --region "$REGION"
 fi
 
 rm -f "$STATE_FILE"
 
-echo "Benchmark instance cleanup finished."
+log "Benchmark instance cleanup finished."

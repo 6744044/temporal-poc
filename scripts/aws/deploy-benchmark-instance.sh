@@ -31,7 +31,67 @@ if [[ -z "$REPO_URL" || -z "$REPO_BRANCH" ]]; then
   exit 1
 fi
 
+get_instance_state() {
+  local instance_id="$1"
+  aws ec2 describe-instances \
+    --instance-ids "$instance_id" \
+    --region "$REGION" \
+    --query 'Reservations[0].Instances[0].State.Name' \
+    --output text
+}
+
+wait_for_instance_running() {
+  local instance_id="$1"
+
+  while true; do
+    local state
+    state="$(get_instance_state "$instance_id")"
+    log "EC2 state for $instance_id: $state"
+    if [[ "$state" == "running" ]]; then
+      return 0
+    fi
+    sleep 10
+  done
+}
+
+wait_for_instance_status_ok() {
+  local instance_id="$1"
+
+  while true; do
+    local status_output instance_status system_status
+    status_output="$(aws ec2 describe-instance-status \
+      --instance-ids "$instance_id" \
+      --include-all-instances \
+      --region "$REGION" \
+      --query 'InstanceStatuses[0].[InstanceStatus.Status,SystemStatus.Status]' \
+      --output text 2>/dev/null || true)"
+
+    if [[ -z "$status_output" || "$status_output" == "None" ]]; then
+      instance_status="pending"
+      system_status="pending"
+    else
+      read -r instance_status system_status <<<"$status_output"
+    fi
+
+    log "EC2 health checks for $instance_id: instance=$instance_status system=$system_status"
+    if [[ "$instance_status" == "ok" && "$system_status" == "ok" ]]; then
+      return 0
+    fi
+    sleep 10
+  done
+}
+
 mkdir -p "$DEPLOY_DIR"
+
+log "Loaded benchmark deploy config."
+log "  region=$REGION"
+log "  namespace=$TEMPORAL_NAMESPACE"
+log "  address=$TEMPORAL_ADDRESS"
+log "  repo=$REPO_URL"
+log "  branch=$REPO_BRANCH"
+log "  instance_type=$INSTANCE_TYPE"
+log "  task_queue=$TASK_QUEUE"
+log "Resolving default VPC..."
 
 VPC_ID="$(aws ec2 describe-vpcs \
   --region "$REGION" \
@@ -44,6 +104,9 @@ if [[ "$VPC_ID" == "None" || -z "$VPC_ID" ]]; then
   exit 1
 fi
 
+log "Using VPC: $VPC_ID"
+log "Resolving default subnet..."
+
 SUBNET_ID="$(aws ec2 describe-subnets \
   --region "$REGION" \
   --filters Name=vpc-id,Values="$VPC_ID" Name=default-for-az,Values=true \
@@ -55,11 +118,17 @@ if [[ "$SUBNET_ID" == "None" || -z "$SUBNET_ID" ]]; then
   exit 1
 fi
 
+log "Using subnet: $SUBNET_ID"
+log "Resolving latest Amazon Linux AMI..."
+
 AMI_ID="$(aws ssm get-parameter \
   --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64 \
   --region "$REGION" \
   --query 'Parameter.Value' \
   --output text)"
+
+log "Using AMI: $AMI_ID"
+log "Creating security group: $SECURITY_GROUP_NAME"
 
 SECURITY_GROUP_ID="$(aws ec2 create-security-group \
   --group-name "$SECURITY_GROUP_NAME" \
@@ -69,7 +138,10 @@ SECURITY_GROUP_ID="$(aws ec2 create-security-group \
   --query 'GroupId' \
   --output text)"
 
+log "Created security group: $SECURITY_GROUP_ID"
+
 USER_DATA_PATH="$DEPLOY_DIR/user-data.sh"
+log "Writing EC2 user-data script to $USER_DATA_PATH"
 cat >"$USER_DATA_PATH" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -112,6 +184,7 @@ systemctl daemon-reload
 systemctl enable --now temporal-bench-worker.service
 EOF
 
+log "Launching EC2 worker instance..."
 INSTANCE_ID="$(aws ec2 run-instances \
   --image-id "$AMI_ID" \
   --instance-type "$INSTANCE_TYPE" \
@@ -124,14 +197,19 @@ INSTANCE_ID="$(aws ec2 run-instances \
   --query 'Instances[0].InstanceId' \
   --output text)"
 
-aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
-aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region "$REGION"
+log "EC2 instance launched: $INSTANCE_ID"
+log "Waiting for EC2 instance to reach running state..."
+wait_for_instance_running "$INSTANCE_ID"
+log "Waiting for EC2 instance status checks to pass..."
+wait_for_instance_status_ok "$INSTANCE_ID"
 
 PUBLIC_IP="$(aws ec2 describe-instances \
   --instance-ids "$INSTANCE_ID" \
   --region "$REGION" \
   --query 'Reservations[0].Instances[0].PublicIpAddress' \
   --output text)"
+
+log "Resolved public IP: $PUBLIC_IP"
 
 cat >"$STATE_FILE" <<EOF
 REGION=$REGION
@@ -147,15 +225,13 @@ REPO_URL=$REPO_URL
 REPO_BRANCH=$REPO_BRANCH
 EOF
 
-echo "Worker instance created."
-echo "  Instance ID:      $INSTANCE_ID"
-echo "  Security Group:   $SECURITY_GROUP_ID"
-echo "  Public IP:        $PUBLIC_IP"
-echo "  State file:       $STATE_FILE"
-echo "  Waiting ${WAIT_AFTER_BOOT_SECONDS}s for first-time setup to finish..."
+log "Saved state file: $STATE_FILE"
+if (( WAIT_AFTER_BOOT_SECONDS > 0 )); then
+  sleep_with_progress "$WAIT_AFTER_BOOT_SECONDS" "Waiting for first-time instance bootstrap"
+fi
 
-sleep "$WAIT_AFTER_BOOT_SECONDS"
-
-echo
-echo "Next step:"
-echo "  bash scripts/aws/run-benchmark.sh"
+log "Worker instance created."
+log "  Instance ID:    $INSTANCE_ID"
+log "  Security Group: $SECURITY_GROUP_ID"
+log "  Public IP:      $PUBLIC_IP"
+log "  Next step: bash scripts/aws/run-benchmark.sh"
