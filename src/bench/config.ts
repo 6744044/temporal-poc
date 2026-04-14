@@ -49,7 +49,7 @@ export async function loadBenchmarkConfig(): Promise<BenchmarkConfig> {
       activityCount
     ),
     activityDelayMs: getEnvInt('BENCH_ACTIVITY_DELAY_MS', 1),
-    payloadBytes: getEnvInt('BENCH_PAYLOAD_BYTES', 64),
+    payloadBytes: getEnvInt('BENCH_PAYLOAD_BYTES', 1024),
     resultsDir: path.resolve(getEnvString('BENCH_RESULTS_DIR', './results')),
     metricsBindAddress: getEnvString('BENCH_METRICS_BIND_ADDRESS', '0.0.0.0:9464'),
     logLevel: getEnvLogLevel('BENCH_LOG_LEVEL', 'INFO'),

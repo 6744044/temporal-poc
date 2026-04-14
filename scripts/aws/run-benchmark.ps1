@@ -8,7 +8,7 @@ param(
   [int]$ActivityCount = 5,
   [string]$LocalActivitySteps = '',
   [int]$ActivityDelayMs = 1,
-  [int]$PayloadBytes = 64,
+  [int]$PayloadBytes = 1024,
   [string]$TaskQueue = 'benchmark-latency',
   [string]$ResultsDir = '/opt/temporal-bench/results'
 )
