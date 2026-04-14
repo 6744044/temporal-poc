@@ -1,6 +1,11 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { benchmarkSteps, type BenchmarkSummary } from './types';
+import {
+  buildBenchmarkStepNames,
+  normalizeBenchmarkStepName,
+  type BenchmarkSummary,
+  type PercentileSummary,
+} from './types';
 
 async function run(): Promise<void> {
   const [baselinePath, candidatePath] = process.argv.slice(2);
@@ -16,6 +21,14 @@ async function run(): Promise<void> {
 
   console.log(
     `Comparing "${candidate.benchmarkLabel}" against baseline "${baseline.benchmarkLabel}"`
+  );
+  console.log('');
+
+  printMetricComparison(
+    'Activities per workflow',
+    getActivityCount(baseline),
+    getActivityCount(candidate),
+    ''
   );
   console.log('');
 
@@ -52,11 +65,15 @@ async function run(): Promise<void> {
   );
   console.log('');
   console.log('Per-step worker duration p95:');
-  for (const step of benchmarkSteps) {
+  const baselineStepDurations = getNormalizedStepDurations(baseline);
+  const candidateStepDurations = getNormalizedStepDurations(candidate);
+  const comparableSteps = getComparableSteps(baseline, candidate);
+
+  for (const step of comparableSteps) {
     printMetricComparison(
       `  ${step}`,
-      baseline.stepDurationsMs[step].p95Ms,
-      candidate.stepDurationsMs[step].p95Ms
+      baselineStepDurations[step]?.p95Ms ?? 0,
+      candidateStepDurations[step]?.p95Ms ?? 0
     );
   }
 }
@@ -70,17 +87,61 @@ async function readSummary(summaryPath: string): Promise<BenchmarkSummary> {
 function printMetricComparison(
   label: string,
   baselineValue: number,
-  candidateValue: number
+  candidateValue: number,
+  unit = 'ms'
 ): void {
   const delta = candidateValue - baselineValue;
   const deltaPct = baselineValue === 0 ? 0 : (delta / baselineValue) * 100;
   const sign = delta > 0 ? '+' : '';
+  const formattedUnit = unit === '' ? '' : unit;
 
   console.log(
-    `${label}: baseline=${baselineValue.toFixed(2)}ms, candidate=${candidateValue.toFixed(
+    `${label}: baseline=${baselineValue.toFixed(2)}${formattedUnit}, candidate=${candidateValue.toFixed(
       2
-    )}ms, delta=${sign}${delta.toFixed(2)}ms (${sign}${deltaPct.toFixed(2)}%)`
+    )}${formattedUnit}, delta=${sign}${delta.toFixed(2)}${formattedUnit} (${sign}${deltaPct.toFixed(2)}%)`
   );
+}
+
+function getActivityCount(summary: BenchmarkSummary): number {
+  return (
+    summary.activityCount ??
+    summary.derivedLatencyEstimatesMs.activityCountPerWorkflow ??
+    Object.keys(summary.stepDurationsMs).length
+  );
+}
+
+function getNormalizedStepDurations(
+  summary: BenchmarkSummary
+): Record<string, PercentileSummary> {
+  return Object.entries(summary.stepDurationsMs).reduce<Record<string, PercentileSummary>>(
+    (accumulator, [stepName, percentileSummary]) => {
+      accumulator[normalizeBenchmarkStepName(stepName)] = percentileSummary;
+      return accumulator;
+    },
+    {}
+  );
+}
+
+function getComparableSteps(
+  baseline: BenchmarkSummary,
+  candidate: BenchmarkSummary
+): string[] {
+  const baselineSteps = Object.keys(getNormalizedStepDurations(baseline));
+  const candidateSteps = Object.keys(getNormalizedStepDurations(candidate));
+  const expectedBaselineSteps = buildBenchmarkStepNames(getActivityCount(baseline));
+  const expectedCandidateSteps = buildBenchmarkStepNames(getActivityCount(candidate));
+  const stepNames = new Set<string>([
+    ...baselineSteps,
+    ...candidateSteps,
+    ...expectedBaselineSteps,
+    ...expectedCandidateSteps,
+  ]);
+
+  return [...stepNames].sort((left, right) => {
+    const leftIndex = Number.parseInt(left.replace('step', ''), 10);
+    const rightIndex = Number.parseInt(right.replace('step', ''), 10);
+    return leftIndex - rightIndex;
+  });
 }
 
 run().catch((error) => {

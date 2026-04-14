@@ -31,6 +31,7 @@ comparing Temporal latency across environments.
 $env:BENCH_TOTAL_WORKFLOWS='200'
 $env:BENCH_WARMUP_WORKFLOWS='20'
 $env:BENCH_CONCURRENCY='10'
+$env:BENCH_ACTIVITY_COUNT='5'
 $env:BENCH_ACTIVITY_DELAY_MS='1'
 npm run bench:client
 ```
@@ -46,6 +47,9 @@ The residual values are not pure network timings. They are the portion left afte
 subtracting measured activity runtime from workflow end-to-end latency, so they
 still include transport, polling, scheduling, workflow execution, and
 serialization overhead.
+
+Use `BENCH_ACTIVITY_COUNT` to repeat the same benchmark activity multiple times
+per workflow without changing code. The default is `5`.
 
 #### Comparing two runs
 
@@ -105,7 +109,7 @@ Set:
 
 1. `TEMPORAL_ADDRESS`
 1. `TEMPORAL_NAMESPACE`
-1. Optional benchmark defaults such as concurrency and workflow count
+1. Optional benchmark defaults such as concurrency, activity count, and workflow count
 
 1. Run the deploy script. If `TEMPORAL_API_KEY` is not already set in the
    session, the script will prompt you to enter it securely and continue:

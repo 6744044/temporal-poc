@@ -34,7 +34,7 @@ async function run(): Promise<void> {
 
   if (config.warmupWorkflows > 0) {
     console.log(
-      `Running warmup phase (${config.warmupWorkflows} workflows @ concurrency ${config.concurrency})`
+      `Running warmup phase (${config.warmupWorkflows} workflows @ concurrency ${config.concurrency}, ${config.activityCount} activities/workflow)`
     );
     allRecords.push(
       ...(await runPhase({
@@ -48,7 +48,7 @@ async function run(): Promise<void> {
   }
 
   console.log(
-    `Running measured phase (${config.totalWorkflows} workflows @ concurrency ${config.concurrency})`
+    `Running measured phase (${config.totalWorkflows} workflows @ concurrency ${config.concurrency}, ${config.activityCount} activities/workflow)`
   );
   allRecords.push(
     ...(await runPhase({
@@ -65,6 +65,7 @@ async function run(): Promise<void> {
     totalRequested: config.totalWorkflows,
     warmupWorkflows: config.warmupWorkflows,
     concurrency: config.concurrency,
+    activityCount: config.activityCount,
     activityDelayMs: config.activityDelayMs,
     payloadBytes: config.payloadBytes,
     records: allRecords,
@@ -150,6 +151,7 @@ async function runSingleWorkflow(args: {
   const workflowInput: BenchmarkWorkflowInput = {
     benchmarkLabel: args.config.deploymentLabel,
     iteration: args.iteration,
+    activityCount: args.config.activityCount,
     activityDelayMs: args.config.activityDelayMs,
     payload: 'x'.repeat(args.config.payloadBytes),
   };

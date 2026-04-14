@@ -1,8 +1,8 @@
 import {
-  benchmarkSteps,
+  buildBenchmarkStepNames,
+  normalizeBenchmarkStepName,
   BenchmarkDerivedLatencyEstimates,
   BenchmarkRecord,
-  BenchmarkStepName,
   BenchmarkSummary,
   PercentileSummary,
 } from './types';
@@ -12,6 +12,7 @@ export function buildBenchmarkSummary(args: {
   totalRequested: number;
   warmupWorkflows: number;
   concurrency: number;
+  activityCount: number;
   activityDelayMs: number;
   payloadBytes: number;
   records: BenchmarkRecord[];
@@ -34,26 +35,30 @@ export function buildBenchmarkSummary(args: {
     (record.activityResults ?? []).map((result) => result.workerDurationMs)
   );
 
-  const stepDurations = benchmarkSteps.reduce<Record<BenchmarkStepName, number[]>>(
+  const expectedStepNames = buildBenchmarkStepNames(args.activityCount);
+  const stepDurations = expectedStepNames.reduce<Record<string, number[]>>(
     (accumulator, step) => {
       accumulator[step] = [];
       return accumulator;
     },
-    {} as Record<BenchmarkStepName, number[]>
+    {}
   );
 
   for (const record of successfulRecords) {
     for (const activityResult of record.activityResults ?? []) {
-      stepDurations[activityResult.step].push(activityResult.workerDurationMs);
+      const stepName = normalizeBenchmarkStepName(activityResult.step);
+      stepDurations[stepName] ??= [];
+      stepDurations[stepName].push(activityResult.workerDurationMs);
     }
   }
 
-  const summarizedStepDurations = benchmarkSteps.reduce<
-    Record<BenchmarkStepName, PercentileSummary>
-  >((accumulator, step) => {
+  const summarizedStepDurations = getOrderedStepNames(
+    Object.keys(stepDurations),
+    args.activityCount
+  ).reduce<Record<string, PercentileSummary>>((accumulator, step) => {
     accumulator[step] = summarizeNumbers(stepDurations[step]);
     return accumulator;
-  }, {} as Record<BenchmarkStepName, PercentileSummary>);
+  }, {});
 
   const workflowSummary = summarizeNumbers(workflowLatencies);
   const workerActivitySummary = summarizeNumbers(allActivityDurations);
@@ -64,6 +69,7 @@ export function buildBenchmarkSummary(args: {
     totalRequested: args.totalRequested,
     warmupWorkflows: args.warmupWorkflows,
     concurrency: args.concurrency,
+    activityCount: args.activityCount,
     activityDelayMs: args.activityDelayMs,
     payloadBytes: args.payloadBytes,
     completed: successfulRecords.length,
@@ -71,7 +77,7 @@ export function buildBenchmarkSummary(args: {
     workflowEndToEndMs: workflowSummary,
     workerActivityDurationMs: workerActivitySummary,
     derivedLatencyEstimatesMs: buildDerivedLatencyEstimates({
-      activityCountPerWorkflow: benchmarkSteps.length,
+      activityCountPerWorkflow: args.activityCount,
       activityDelayMs: args.activityDelayMs,
       workflowEndToEndMeanMs: workflowSummary.meanMs,
       workerActivityMeanMs: workerActivitySummary.meanMs,
@@ -114,7 +120,7 @@ export function formatSummary(summary: BenchmarkSummary): string {
   const lines = [
     `Benchmark label: ${summary.benchmarkLabel}`,
     `Completed workflows: ${summary.completed}/${summary.totalRequested} (failed: ${summary.failed})`,
-    `Concurrency: ${summary.concurrency}, warmup: ${summary.warmupWorkflows}, activity delay: ${summary.activityDelayMs}ms, payload: ${summary.payloadBytes} bytes`,
+    `Concurrency: ${summary.concurrency}, warmup: ${summary.warmupWorkflows}, activities/workflow: ${summary.activityCount}, activity delay: ${summary.activityDelayMs}ms, payload: ${summary.payloadBytes} bytes`,
     '',
     formatPercentileBlock('Workflow end-to-end latency', summary.workflowEndToEndMs),
     '',
@@ -136,7 +142,10 @@ export function formatSummary(summary: BenchmarkSummary): string {
     '  note: residual includes transport, scheduling, polling, workflow execution, and serialization',
     '',
     'Per-step worker activity duration:',
-    ...benchmarkSteps.map((step) =>
+    ...getOrderedStepNames(
+      Object.keys(summary.stepDurationsMs),
+      summary.activityCount
+    ).map((step) =>
       `  ${step}: ${formatPercentileInline(summary.stepDurationsMs[step])}`
     ),
   ];
@@ -176,6 +185,25 @@ function percentile(sortedValues: number[], ratio: number): number {
   );
 
   return roundToTwoDecimals(sortedValues[index]);
+}
+
+function getOrderedStepNames(
+  stepNames: string[],
+  activityCount: number
+): string[] {
+  const expectedStepNames = buildBenchmarkStepNames(activityCount);
+  const allStepNames = new Set<string>([...expectedStepNames, ...stepNames]);
+
+  return [...allStepNames].sort((left, right) => {
+    const leftIndex = parseStepIndex(left);
+    const rightIndex = parseStepIndex(right);
+    return leftIndex - rightIndex;
+  });
+}
+
+function parseStepIndex(stepName: string): number {
+  const normalizedStepName = normalizeBenchmarkStepName(stepName);
+  return Number.parseInt(normalizedStepName.replace('step', ''), 10);
 }
 
 function buildDerivedLatencyEstimates(args: {

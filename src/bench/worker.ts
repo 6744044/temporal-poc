@@ -20,6 +20,7 @@ async function run(): Promise<void> {
     tlsMode: getTlsMode(config.temporal),
     taskQueue: config.taskQueue,
     deploymentLabel: config.deploymentLabel,
+    activityCount: config.activityCount,
     metricsBindAddress: config.metricsBindAddress,
   };
 
@@ -64,6 +65,7 @@ async function run(): Promise<void> {
         namespace: config.temporal.namespace,
         taskQueue: config.taskQueue,
         deploymentLabel: config.deploymentLabel,
+        activityCount: config.activityCount,
         metricsBindAddress: config.metricsBindAddress,
         workflowTaskExecutions: config.workflowTaskExecutions,
         workflowTaskPolls: config.workflowTaskPolls,

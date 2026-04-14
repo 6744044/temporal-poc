@@ -18,6 +18,7 @@ export interface BenchmarkConfig {
   totalWorkflows: number;
   warmupWorkflows: number;
   concurrency: number;
+  activityCount: number;
   activityDelayMs: number;
   payloadBytes: number;
   resultsDir: string;
@@ -39,6 +40,7 @@ export async function loadBenchmarkConfig(): Promise<BenchmarkConfig> {
     totalWorkflows: getEnvInt('BENCH_TOTAL_WORKFLOWS', 2000),
     warmupWorkflows: getEnvInt('BENCH_WARMUP_WORKFLOWS', 100),
     concurrency: getEnvInt('BENCH_CONCURRENCY', 10),
+    activityCount: getEnvPositiveInt('BENCH_ACTIVITY_COUNT', 5),
     activityDelayMs: getEnvInt('BENCH_ACTIVITY_DELAY_MS', 1),
     payloadBytes: getEnvInt('BENCH_PAYLOAD_BYTES', 64),
     resultsDir: path.resolve(getEnvString('BENCH_RESULTS_DIR', './results')),
@@ -113,6 +115,15 @@ function getEnvInt(key: string, defaultValue: number): number {
   const parsed = Number.parseInt(value, 10);
   if (Number.isNaN(parsed) || parsed < 0) {
     throw new Error(`${key} must be a non-negative integer. Received: ${value}`);
+  }
+
+  return parsed;
+}
+
+function getEnvPositiveInt(key: string, defaultValue: number): number {
+  const parsed = getEnvInt(key, defaultValue);
+  if (parsed <= 0) {
+    throw new Error(`${key} must be greater than zero. Received: ${parsed}`);
   }
 
   return parsed;

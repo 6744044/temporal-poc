@@ -2,44 +2,12 @@ import os from 'os';
 import { setTimeout as sleep } from 'timers/promises';
 import { log } from '@temporalio/activity';
 import type {
+  BenchmarkActivityInput,
   BenchmarkActivityResult,
-  BenchmarkStepName,
-  BenchmarkWorkflowInput,
 } from './types';
 
-export async function stepOne(
-  input: BenchmarkWorkflowInput
-): Promise<BenchmarkActivityResult> {
-  return await runStep('stepOne', input);
-}
-
-export async function stepTwo(
-  input: BenchmarkWorkflowInput
-): Promise<BenchmarkActivityResult> {
-  return await runStep('stepTwo', input);
-}
-
-export async function stepThree(
-  input: BenchmarkWorkflowInput
-): Promise<BenchmarkActivityResult> {
-  return await runStep('stepThree', input);
-}
-
-export async function stepFour(
-  input: BenchmarkWorkflowInput
-): Promise<BenchmarkActivityResult> {
-  return await runStep('stepFour', input);
-}
-
-export async function stepFive(
-  input: BenchmarkWorkflowInput
-): Promise<BenchmarkActivityResult> {
-  return await runStep('stepFive', input);
-}
-
-async function runStep(
-  step: BenchmarkStepName,
-  input: BenchmarkWorkflowInput
+export async function runBenchmarkActivity(
+  input: BenchmarkActivityInput
 ): Promise<BenchmarkActivityResult> {
   const startedAt = Date.now();
 
@@ -50,7 +18,7 @@ async function runStep(
   const payloadBytes = Buffer.byteLength(input.payload, 'utf8');
   const workerDurationMs = Date.now() - startedAt;
   const result: BenchmarkActivityResult = {
-    step,
+    step: input.step,
     workerDurationMs,
     payloadBytes,
     workerHost: os.hostname(),
@@ -58,7 +26,7 @@ async function runStep(
   };
 
   log.info('benchmark activity completed', {
-    step,
+    step: input.step,
     iteration: input.iteration,
     workerDurationMs,
     payloadBytes,

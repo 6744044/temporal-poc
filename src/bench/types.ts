@@ -1,20 +1,17 @@
-export const benchmarkSteps = [
-  'stepOne',
-  'stepTwo',
-  'stepThree',
-  'stepFour',
-  'stepFive',
-] as const;
-
-export type BenchmarkStepName = (typeof benchmarkSteps)[number];
+export type BenchmarkStepName = `step${number}`;
 
 export type BenchmarkPhase = 'warmup' | 'measure';
 
 export interface BenchmarkWorkflowInput {
   benchmarkLabel: string;
   iteration: number;
+  activityCount: number;
   activityDelayMs: number;
   payload: string;
+}
+
+export interface BenchmarkActivityInput extends BenchmarkWorkflowInput {
+  step: BenchmarkStepName;
 }
 
 export interface BenchmarkActivityResult {
@@ -68,6 +65,7 @@ export interface BenchmarkSummary {
   totalRequested: number;
   warmupWorkflows: number;
   concurrency: number;
+  activityCount: number;
   activityDelayMs: number;
   payloadBytes: number;
   completed: number;
@@ -75,6 +73,47 @@ export interface BenchmarkSummary {
   workflowEndToEndMs: PercentileSummary;
   workerActivityDurationMs: PercentileSummary;
   derivedLatencyEstimatesMs: BenchmarkDerivedLatencyEstimates;
-  stepDurationsMs: Record<BenchmarkStepName, PercentileSummary>;
+  stepDurationsMs: Record<string, PercentileSummary>;
   sampleFailures: string[];
+}
+
+export function buildBenchmarkStepName(stepIndex: number): BenchmarkStepName {
+  if (!Number.isInteger(stepIndex) || stepIndex <= 0) {
+    throw new Error(
+      `Benchmark step index must be a positive integer. Received: ${stepIndex}`
+    );
+  }
+
+  return `step${stepIndex}`;
+}
+
+export function buildBenchmarkStepNames(
+  activityCount: number
+): BenchmarkStepName[] {
+  if (!Number.isInteger(activityCount) || activityCount <= 0) {
+    throw new Error(
+      `Benchmark activity count must be a positive integer. Received: ${activityCount}`
+    );
+  }
+
+  return Array.from({ length: activityCount }, (_unused, index) =>
+    buildBenchmarkStepName(index + 1)
+  );
+}
+
+export function normalizeBenchmarkStepName(step: string): BenchmarkStepName {
+  const legacyStepMap: Record<string, BenchmarkStepName> = {
+    stepOne: 'step1',
+    stepTwo: 'step2',
+    stepThree: 'step3',
+    stepFour: 'step4',
+    stepFive: 'step5',
+  };
+
+  const normalized = legacyStepMap[step] ?? step;
+  if (/^step[1-9]\d*$/.test(normalized)) {
+    return normalized;
+  }
+
+  throw new Error(`Invalid benchmark step name: ${step}`);
 }
