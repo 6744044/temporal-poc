@@ -6,6 +6,7 @@ export interface BenchmarkWorkflowInput {
   benchmarkLabel: string;
   iteration: number;
   activityCount: number;
+  localActivitySteps: BenchmarkStepName[];
   activityDelayMs: number;
   payload: string;
 }
@@ -66,6 +67,7 @@ export interface BenchmarkSummary {
   warmupWorkflows: number;
   concurrency: number;
   activityCount: number;
+  localActivitySteps: BenchmarkStepName[];
   activityDelayMs: number;
   payloadBytes: number;
   completed: number;

@@ -34,7 +34,9 @@ async function run(): Promise<void> {
 
   if (config.warmupWorkflows > 0) {
     console.log(
-      `Running warmup phase (${config.warmupWorkflows} workflows @ concurrency ${config.concurrency}, ${config.activityCount} activities/workflow)`
+      `Running warmup phase (${config.warmupWorkflows} workflows @ concurrency ${config.concurrency}, ${config.activityCount} activities/workflow, local steps: ${formatLocalActivitySteps(
+        config.localActivitySteps
+      )})`
     );
     allRecords.push(
       ...(await runPhase({
@@ -48,7 +50,9 @@ async function run(): Promise<void> {
   }
 
   console.log(
-    `Running measured phase (${config.totalWorkflows} workflows @ concurrency ${config.concurrency}, ${config.activityCount} activities/workflow)`
+    `Running measured phase (${config.totalWorkflows} workflows @ concurrency ${config.concurrency}, ${config.activityCount} activities/workflow, local steps: ${formatLocalActivitySteps(
+      config.localActivitySteps
+    )})`
   );
   allRecords.push(
     ...(await runPhase({
@@ -66,6 +70,7 @@ async function run(): Promise<void> {
     warmupWorkflows: config.warmupWorkflows,
     concurrency: config.concurrency,
     activityCount: config.activityCount,
+    localActivitySteps: config.localActivitySteps,
     activityDelayMs: config.activityDelayMs,
     payloadBytes: config.payloadBytes,
     records: allRecords,
@@ -152,6 +157,7 @@ async function runSingleWorkflow(args: {
     benchmarkLabel: args.config.deploymentLabel,
     iteration: args.iteration,
     activityCount: args.config.activityCount,
+    localActivitySteps: args.config.localActivitySteps,
     activityDelayMs: args.config.activityDelayMs,
     payload: 'x'.repeat(args.config.payloadBytes),
   };
@@ -210,3 +216,7 @@ run().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
+function formatLocalActivitySteps(localActivitySteps: string[]): string {
+  return localActivitySteps.length === 0 ? 'none' : localActivitySteps.join(', ');
+}

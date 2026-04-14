@@ -30,6 +30,11 @@ async function run(): Promise<void> {
     getActivityCount(candidate),
     ''
   );
+  console.log(
+    `Local activity steps: baseline=${formatLocalActivitySteps(getLocalActivitySteps(baseline))}, candidate=${formatLocalActivitySteps(
+      getLocalActivitySteps(candidate)
+    )}`
+  );
   console.log('');
 
   printMetricComparison(
@@ -110,6 +115,12 @@ function getActivityCount(summary: BenchmarkSummary): number {
   );
 }
 
+function getLocalActivitySteps(summary: BenchmarkSummary): string[] {
+  return [...(summary.localActivitySteps ?? [])]
+    .map((stepName) => normalizeBenchmarkStepName(stepName))
+    .sort(compareStepNames);
+}
+
 function getNormalizedStepDurations(
   summary: BenchmarkSummary
 ): Record<string, PercentileSummary> {
@@ -137,11 +148,17 @@ function getComparableSteps(
     ...expectedCandidateSteps,
   ]);
 
-  return [...stepNames].sort((left, right) => {
-    const leftIndex = Number.parseInt(left.replace('step', ''), 10);
-    const rightIndex = Number.parseInt(right.replace('step', ''), 10);
-    return leftIndex - rightIndex;
-  });
+  return [...stepNames].sort(compareStepNames);
+}
+
+function compareStepNames(left: string, right: string): number {
+  const leftIndex = Number.parseInt(normalizeBenchmarkStepName(left).replace('step', ''), 10);
+  const rightIndex = Number.parseInt(normalizeBenchmarkStepName(right).replace('step', ''), 10);
+  return leftIndex - rightIndex;
+}
+
+function formatLocalActivitySteps(localActivitySteps: string[]): string {
+  return localActivitySteps.length === 0 ? 'none' : localActivitySteps.join(', ');
 }
 
 run().catch((error) => {

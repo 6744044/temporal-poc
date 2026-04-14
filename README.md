@@ -32,6 +32,7 @@ $env:BENCH_TOTAL_WORKFLOWS='200'
 $env:BENCH_WARMUP_WORKFLOWS='20'
 $env:BENCH_CONCURRENCY='10'
 $env:BENCH_ACTIVITY_COUNT='5'
+$env:BENCH_LOCAL_ACTIVITY_STEPS='3'
 $env:BENCH_ACTIVITY_DELAY_MS='1'
 npm run bench:client
 ```
@@ -50,6 +51,9 @@ serialization overhead.
 
 Use `BENCH_ACTIVITY_COUNT` to repeat the same benchmark activity multiple times
 per workflow without changing code. The default is `5`.
+
+Use `BENCH_LOCAL_ACTIVITY_STEPS` to make only selected steps local activities,
+for example `3` or `3,4`. Leave it empty to keep all activities normal.
 
 #### Comparing two runs
 
@@ -84,6 +88,7 @@ Run the benchmark remotely through SSM:
   -TotalWorkflows 2000 `
   -WarmupWorkflows 100 `
   -Concurrency 10 `
+  -LocalActivitySteps '3,4' `
   -ActivityDelayMs 1
 ```
 
@@ -109,7 +114,7 @@ Set:
 
 1. `TEMPORAL_ADDRESS`
 1. `TEMPORAL_NAMESPACE`
-1. Optional benchmark defaults such as concurrency, activity count, and workflow count
+1. Optional benchmark defaults such as concurrency, activity count, local activity steps, and workflow count
 
 1. Run the deploy script. If `TEMPORAL_API_KEY` is not already set in the
    session, the script will prompt you to enter it securely and continue:
@@ -123,6 +128,9 @@ bash scripts/aws/deploy-benchmark-instance.sh
 ```bash
 bash scripts/aws/run-benchmark.sh
 ```
+
+To switch selected steps to local activities, set for example
+`export BENCH_LOCAL_ACTIVITY_STEPS=3,4` before running the client.
 
 1. Clean up the worker instance:
 

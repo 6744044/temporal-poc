@@ -10,6 +10,7 @@ param(
   [string]$DeploymentLabel = 'aws-ec2',
   [string]$TaskQueue = 'benchmark-latency',
   [int]$ActivityCount = 5,
+  [string]$LocalActivitySteps = '',
   [string]$ArtifactBucket = '',
   [string]$RoleName = 'temporal-benchmark-ssm-role',
   [string]$InstanceProfileName = 'temporal-benchmark-ssm-profile',
@@ -208,6 +209,7 @@ TEMPORAL_API_KEY=$TemporalApiKey
 BENCH_TASK_QUEUE=$TaskQueue
 BENCH_DEPLOYMENT_LABEL=$DeploymentLabel
 BENCH_ACTIVITY_COUNT=$ActivityCount
+BENCH_LOCAL_ACTIVITY_STEPS=$LocalActivitySteps
 BENCH_METRICS_BIND_ADDRESS=0.0.0.0:9464
 BENCH_LOG_LEVEL=INFO
 EOF

@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import type { ConnectionOptions } from '@temporalio/client';
 import type { NativeConnectionOptions } from '@temporalio/worker';
+import { buildBenchmarkStepName, type BenchmarkStepName } from './types';
 
 export interface TemporalConnectionConfig {
   address: string;
@@ -19,6 +20,7 @@ export interface BenchmarkConfig {
   warmupWorkflows: number;
   concurrency: number;
   activityCount: number;
+  localActivitySteps: BenchmarkStepName[];
   activityDelayMs: number;
   payloadBytes: number;
   resultsDir: string;
@@ -32,6 +34,7 @@ export interface BenchmarkConfig {
 
 export async function loadBenchmarkConfig(): Promise<BenchmarkConfig> {
   const temporal = await loadTemporalConnectionConfig();
+  const activityCount = getEnvPositiveInt('BENCH_ACTIVITY_COUNT', 5);
 
   return {
     temporal,
@@ -40,7 +43,11 @@ export async function loadBenchmarkConfig(): Promise<BenchmarkConfig> {
     totalWorkflows: getEnvInt('BENCH_TOTAL_WORKFLOWS', 2000),
     warmupWorkflows: getEnvInt('BENCH_WARMUP_WORKFLOWS', 100),
     concurrency: getEnvInt('BENCH_CONCURRENCY', 10),
-    activityCount: getEnvPositiveInt('BENCH_ACTIVITY_COUNT', 5),
+    activityCount,
+    localActivitySteps: parseLocalActivitySteps(
+      process.env.BENCH_LOCAL_ACTIVITY_STEPS,
+      activityCount
+    ),
     activityDelayMs: getEnvInt('BENCH_ACTIVITY_DELAY_MS', 1),
     payloadBytes: getEnvInt('BENCH_PAYLOAD_BYTES', 64),
     resultsDir: path.resolve(getEnvString('BENCH_RESULTS_DIR', './results')),
@@ -127,6 +134,48 @@ function getEnvPositiveInt(key: string, defaultValue: number): number {
   }
 
   return parsed;
+}
+
+export function parseLocalActivitySteps(
+  rawValue: string | undefined,
+  activityCount: number
+): BenchmarkStepName[] {
+  if (rawValue === undefined || rawValue.trim() === '') {
+    return [];
+  }
+
+  const uniqueStepIndexes = new Set<number>();
+  for (const token of rawValue.split(',')) {
+    const normalizedToken = token.trim();
+    if (normalizedToken === '') {
+      continue;
+    }
+
+    const index = parseLocalActivityStepIndex(normalizedToken);
+    if (index <= 0 || index > activityCount) {
+      throw new Error(
+        `BENCH_LOCAL_ACTIVITY_STEPS must reference steps between 1 and ${activityCount}. Received: ${normalizedToken}`
+      );
+    }
+
+    uniqueStepIndexes.add(index);
+  }
+
+  return [...uniqueStepIndexes]
+    .sort((left, right) => left - right)
+    .map((index) => buildBenchmarkStepName(index));
+}
+
+function parseLocalActivityStepIndex(token: string): number {
+  const stepMatch = /^step(\d+)$/i.exec(token);
+  const numericText = stepMatch?.[1] ?? token;
+  if (!/^[1-9]\d*$/.test(numericText)) {
+    throw new Error(
+      `BENCH_LOCAL_ACTIVITY_STEPS must be a comma-separated list of positive step numbers. Received: ${token}`
+    );
+  }
+
+  return Number.parseInt(numericText, 10);
 }
 
 function getEnvLogLevel(

@@ -21,6 +21,7 @@ async function run(): Promise<void> {
     taskQueue: config.taskQueue,
     deploymentLabel: config.deploymentLabel,
     activityCount: config.activityCount,
+    localActivitySteps: config.localActivitySteps,
     metricsBindAddress: config.metricsBindAddress,
   };
 
@@ -66,6 +67,7 @@ async function run(): Promise<void> {
         taskQueue: config.taskQueue,
         deploymentLabel: config.deploymentLabel,
         activityCount: config.activityCount,
+        localActivitySteps: config.localActivitySteps,
         metricsBindAddress: config.metricsBindAddress,
         workflowTaskExecutions: config.workflowTaskExecutions,
         workflowTaskPolls: config.workflowTaskPolls,

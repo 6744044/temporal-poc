@@ -34,15 +34,18 @@ void test('buildBenchmarkSummary supports configurable activity counts', () => {
     warmupWorkflows: 0,
     concurrency: 1,
     activityCount,
+    localActivitySteps: ['step3', 'step4'],
     activityDelayMs: 1,
     payloadBytes: 1024,
     records,
   });
 
   assert.equal(summary.activityCount, activityCount);
+  assert.deepEqual(summary.localActivitySteps, ['step3', 'step4']);
   assert.equal(summary.derivedLatencyEstimatesMs.activityCountPerWorkflow, activityCount);
   assert.equal(summary.stepDurationsMs.step10.meanMs, 2);
   assert.match(formatSummary(summary), /activities\/workflow: 10/);
+  assert.match(formatSummary(summary), /local activities: step3, step4/);
 });
 
 void test('legacy step names normalize to numeric step labels', () => {

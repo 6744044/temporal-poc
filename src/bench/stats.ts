@@ -4,6 +4,7 @@ import {
   BenchmarkDerivedLatencyEstimates,
   BenchmarkRecord,
   BenchmarkSummary,
+  BenchmarkStepName,
   PercentileSummary,
 } from './types';
 
@@ -13,6 +14,7 @@ export function buildBenchmarkSummary(args: {
   warmupWorkflows: number;
   concurrency: number;
   activityCount: number;
+  localActivitySteps: BenchmarkStepName[];
   activityDelayMs: number;
   payloadBytes: number;
   records: BenchmarkRecord[];
@@ -70,6 +72,7 @@ export function buildBenchmarkSummary(args: {
     warmupWorkflows: args.warmupWorkflows,
     concurrency: args.concurrency,
     activityCount: args.activityCount,
+    localActivitySteps: [...args.localActivitySteps],
     activityDelayMs: args.activityDelayMs,
     payloadBytes: args.payloadBytes,
     completed: successfulRecords.length,
@@ -120,7 +123,9 @@ export function formatSummary(summary: BenchmarkSummary): string {
   const lines = [
     `Benchmark label: ${summary.benchmarkLabel}`,
     `Completed workflows: ${summary.completed}/${summary.totalRequested} (failed: ${summary.failed})`,
-    `Concurrency: ${summary.concurrency}, warmup: ${summary.warmupWorkflows}, activities/workflow: ${summary.activityCount}, activity delay: ${summary.activityDelayMs}ms, payload: ${summary.payloadBytes} bytes`,
+    `Concurrency: ${summary.concurrency}, warmup: ${summary.warmupWorkflows}, activities/workflow: ${summary.activityCount}, local activities: ${formatLocalActivitySteps(
+      summary.localActivitySteps
+    )}, activity delay: ${summary.activityDelayMs}ms, payload: ${summary.payloadBytes} bytes`,
     '',
     formatPercentileBlock('Workflow end-to-end latency', summary.workflowEndToEndMs),
     '',
@@ -160,6 +165,10 @@ export function formatSummary(summary: BenchmarkSummary): string {
 
 function formatPercentileBlock(label: string, summary: PercentileSummary): string {
   return `${label}\n  ${formatPercentileInline(summary)}`;
+}
+
+function formatLocalActivitySteps(localActivitySteps: string[]): string {
+  return localActivitySteps.length === 0 ? 'none' : localActivitySteps.join(', ');
 }
 
 function formatPercentileInline(summary: PercentileSummary): string {
