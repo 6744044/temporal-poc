@@ -53,6 +53,7 @@ load_cloudshell_config() {
   export BENCH_WARMUP_WORKFLOWS="${BENCH_WARMUP_WORKFLOWS:-100}"
   export BENCH_CONCURRENCY="${BENCH_CONCURRENCY:-10}"
   export BENCH_PAYLOAD_BYTES="${BENCH_PAYLOAD_BYTES:-1024}"
+  export REPO_COMMIT="${REPO_COMMIT:-}"
 }
 
 require_config_value() {

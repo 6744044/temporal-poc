@@ -68,6 +68,10 @@ if [[ -f "$STATE_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$STATE_FILE"
   log "Using worker instance from state file: ${INSTANCE_ID:-unknown}"
+  if [[ -n "${REPO_BRANCH:-}" || -n "${REPO_COMMIT:-}" ]]; then
+    log "  worker_repo_branch=${REPO_BRANCH:-none}"
+    log "  worker_repo_commit=${REPO_COMMIT:-head-of-branch}"
+  fi
 fi
 
 export BENCH_TOTAL_WORKFLOWS

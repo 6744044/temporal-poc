@@ -25,11 +25,66 @@ TAG_NAME="${TAG_NAME:-temporal-bench-worker}"
 WAIT_AFTER_BOOT_SECONDS="${WAIT_AFTER_BOOT_SECONDS:-180}"
 REPO_URL="${REPO_URL:-$(git -C "$PROJECT_ROOT" config --get remote.origin.url 2>/dev/null || true)}"
 REPO_BRANCH="${REPO_BRANCH:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)}"
+REPO_COMMIT="${REPO_COMMIT:-}"
 
 require_cmd aws
 
-if [[ -z "$REPO_URL" || -z "$REPO_BRANCH" ]]; then
-  echo "Unable to determine REPO_URL/REPO_BRANCH from git. Set them explicitly." >&2
+usage() {
+  cat <<'EOF'
+Usage: bash scripts/aws/deploy-benchmark-instance.sh [--repo-commit <sha>] [--repo-branch <name>] [--repo-url <url>]
+
+When --repo-commit (or REPO_COMMIT) is set, the EC2 worker checks out that
+exact commit after cloning and ignores the branch tip for the deployed code.
+EOF
+}
+
+require_option_value() {
+  local option_name="$1"
+  local option_value="${2:-}"
+
+  if [[ -z "$option_value" || "$option_value" == --* ]]; then
+    echo "Missing value for $option_name" >&2
+    usage >&2
+    exit 1
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --repo-commit)
+      require_option_value "$1" "${2:-}"
+      REPO_COMMIT="$2"
+      shift 2
+      ;;
+    --repo-branch)
+      require_option_value "$1" "${2:-}"
+      REPO_BRANCH="$2"
+      shift 2
+      ;;
+    --repo-url)
+      require_option_value "$1" "${2:-}"
+      REPO_URL="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$REPO_URL" ]]; then
+  echo "Unable to determine REPO_URL from git. Set it explicitly." >&2
+  exit 1
+fi
+
+if [[ -z "$REPO_BRANCH" && -z "$REPO_COMMIT" ]]; then
+  echo "Unable to determine REPO_BRANCH from git. Set REPO_BRANCH or REPO_COMMIT explicitly." >&2
   exit 1
 fi
 
@@ -90,7 +145,8 @@ log "  region=$REGION"
 log "  namespace=$TEMPORAL_NAMESPACE"
 log "  address=$TEMPORAL_ADDRESS"
 log "  repo=$REPO_URL"
-log "  branch=$REPO_BRANCH"
+log "  branch=${REPO_BRANCH:-none}"
+log "  commit=${REPO_COMMIT:-head-of-branch}"
 log "  instance_type=$INSTANCE_TYPE"
 log "  task_queue=$TASK_QUEUE"
 log "  activity_count=$ACTIVITY_COUNT"
@@ -151,8 +207,15 @@ cat >"$USER_DATA_PATH" <<EOF
 set -euo pipefail
 
 dnf install -y git nodejs npm
-git clone --branch "$REPO_BRANCH" "$REPO_URL" /opt/temporal-poc
-cd /opt/temporal-poc
+if [[ -n "$REPO_COMMIT" ]]; then
+  git clone "$REPO_URL" /opt/temporal-poc
+  cd /opt/temporal-poc
+  git checkout --detach "$REPO_COMMIT"
+else
+  git clone --branch "$REPO_BRANCH" "$REPO_URL" /opt/temporal-poc
+  cd /opt/temporal-poc
+fi
+git rev-parse HEAD >/etc/temporal-bench.commit
 npm ci
 npm run build
 
@@ -229,6 +292,7 @@ TASK_QUEUE=$TASK_QUEUE
 DEPLOYMENT_LABEL=$DEPLOYMENT_LABEL
 REPO_URL=$REPO_URL
 REPO_BRANCH=$REPO_BRANCH
+REPO_COMMIT=$REPO_COMMIT
 EOF
 
 log "Saved state file: $STATE_FILE"

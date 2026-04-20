@@ -114,13 +114,20 @@ Set:
 
 1. `TEMPORAL_ADDRESS`
 1. `TEMPORAL_NAMESPACE`
-1. Optional benchmark defaults such as concurrency, activity count, local activity steps, and workflow count
+1. Optional benchmark defaults such as concurrency, activity count, local activity steps, workflow count, and `REPO_COMMIT` to pin the EC2 worker to an exact git commit
 
 1. Run the deploy script. If `TEMPORAL_API_KEY` is not already set in the
    session, the script will prompt you to enter it securely and continue:
 
 ```bash
 bash scripts/aws/deploy-benchmark-instance.sh
+```
+
+To deploy a worker from a specific commit instead of the current branch head, set
+`REPO_COMMIT` in the shell/config file or pass it directly:
+
+```bash
+bash scripts/aws/deploy-benchmark-instance.sh --repo-commit <git-commit-sha>
 ```
 
 1. Run the benchmark client from CloudShell:
